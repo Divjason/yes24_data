@@ -58,6 +58,45 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// ====== 채팅 기능 ======
+const chatMessages = document.getElementById("chatMessages");
+const chatForm = document.getElementById("chatForm");
+const chatInput = document.getElementById("chatInput");
+
+const messagesRef = collection(db, "messages");
+const qMessages = query(messagesRef, orderBy("created_at", "asc"));
+
+onSnapshot(qMessages, (snapshot) => {
+  chatMessages.innerHTML = "";
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    const li = document.createElement("li");
+    li.textContent = `${data.user_name}: ${data.text}`;
+    chatMessages.appendChild(li);
+  });
+});
+
+chatForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const user = auth.currentUser;
+  if (!user) {
+    alert("먼저 GitHub로 로그인 해주세요.");
+    return;
+  }
+
+  const text = chatInput.value;
+  if (!text.trim()) return;
+
+  await addDoc(messagesRef, {
+    user_id: user.uid,
+    user_name: user.displayName || user.email,
+    text,
+    created_at: serverTimestamp(),
+  });
+
+  chatInput.value = "";
+});
+
 // ====== 0. API & Supabase 설정 ======
 const API_URL =
   "https://raw.githubusercontent.com/Divjason/yes24_api/refs/heads/main/books_yes24.json";
