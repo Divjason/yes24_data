@@ -139,9 +139,17 @@ function renderBooks(books) {
     const card = document.createElement("article");
     card.className = "book-card";
 
+    const url = book.detail_url || "#";
+
     card.innerHTML = `
-      <img src="${book.thumbnail || ""}" alt="${book.title || ""}" />
-      <h3>${book.title || "제목 없음"}</h3>
+      <a href="${url}" target="_blank" rel="noopener noreferrer">
+        <img src="${book.thumbnail || ""}" alt="${book.title || ""}" />
+      </a>
+      <h3>
+        <a href="${url}" target="_blank" rel="noopener noreferrer">
+          ${book.title || "제목 없음"}
+        </a>
+      </h3>
       <p class="meta">${book.author || "저자 미상"} | ${
       book.publisher || ""
     }</p>
