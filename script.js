@@ -194,6 +194,30 @@ function openCommentSection(book) {
   loadComments(book);
 }
 
+// 댓글 삭제
+async function deleteComment(id) {
+  if (!confirm("정말 이 댓글을 삭제할까요?")) return;
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?id=eq.${id}`,
+    {
+      method: "DELETE",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Prefer: "return=minimal",
+      },
+    }
+  );
+
+  if (!res.ok) {
+    console.error("삭제 실패", await res.text());
+    alert("댓글 삭제 중 오류가 발생했습니다.");
+    return;
+  }
+  await loadComments(selectedBook); // 목록 다시 불러오기
+}
+
 // 댓글 조회
 async function loadComments(book) {
   const listEl = document.getElementById("commentList");
