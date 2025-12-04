@@ -29,6 +29,9 @@ const firebaseConfig = {
   apiKey: "AIzaSyDSSdMoaKjpVelOp7GwR_QpOOoIWBmaOXk",
   authDomain: "yes24-project.firebaseapp.com",
   projectId: "yes24-project",
+  storageBucket: "yes24-project.firebasestorage.app",
+  messagingSenderId: "157634568906",
+  appId: "1:157634568906:web:102a2d0edab4d1da3e4a33",
 };
 
 const app = initializeApp(firebaseConfig);
