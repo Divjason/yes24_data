@@ -18,6 +18,12 @@ import {
   onSnapshot,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDSSdMoaKjpVelOp7GwR_QpOOoIWBmaOXk",
@@ -29,6 +35,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GithubAuthProvider();
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // ====== GitHub 로그인 상태 관리 ======
 const loginBtn = document.getElementById("loginBtn");
@@ -71,10 +78,19 @@ onSnapshot(qMessages, (snapshot) => {
   snapshot.forEach((doc) => {
     const data = doc.data();
     const li = document.createElement("li");
-    li.textContent = `${data.user_name}: ${data.text}`;
+
+    let html = `<strong>${data.user_name}</strong>: ${data.text || ""}`;
+
+    if (data.imageUrl) {
+      html += `<br /><img src="${data.imageUrl}" alt="image" style="max-width:200px; border-radius:8px; margin-top:4px;" />`;
+    }
+
+    li.innerHTML = html;
     chatMessages.appendChild(li);
   });
 });
+
+const chatImageInput = document.getElementById("chatImage");
 
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -85,16 +101,39 @@ chatForm.addEventListener("submit", async (e) => {
   }
 
   const text = chatInput.value;
-  if (!text.trim()) return;
+  const file = chatImageInput.files[0];
 
-  await addDoc(messagesRef, {
-    user_id: user.uid,
-    user_name: user.displayName || user.email,
-    text,
-    created_at: serverTimestamp(),
-  });
+  if (!text.trim() && !file) {
+    // 텍스트도 이미지도 없으면 패스
+    return;
+  }
 
-  chatInput.value = "";
+  let imageUrl = null;
+
+  try {
+    // 1) 이미지가 있으면 먼저 Storage에 업로드
+    if (file) {
+      const filePath = `chatImages/${user.uid}/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, filePath);
+      await uploadBytes(storageRef, file);
+      imageUrl = await getDownloadURL(storageRef);
+    }
+
+    // 2) Firestore에 메시지 + imageUrl 저장
+    await addDoc(messagesRef, {
+      user_id: user.uid,
+      user_name: user.displayName || user.email,
+      text,
+      imageUrl, // 없으면 null
+      created_at: serverTimestamp(),
+    });
+
+    chatInput.value = "";
+    chatImageInput.value = "";
+  } catch (err) {
+    console.error("채팅 저장 오류:", err);
+    alert("메시지를 전송하는 중 오류가 발생했습니다.");
+  }
 });
 
 // ====== 0. API & Supabase 설정 ======
