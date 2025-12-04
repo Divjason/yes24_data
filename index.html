@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>YES24 Book Hub</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>YES24 Book Hub (Demo)</h1>
+      <div class="filters">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="책 제목 / 저자 / 출판사 검색"
+        />
+        <select id="categorySelect">
+          <option value="">전체 카테고리</option>
+        </select>
+      </div>
+    </header>
+
+    <main>
+      <section id="authSection" class="comment-section">
+        <h2>GitHub 로그인 & 채팅 데모</h2>
+        <button id="loginBtn">GitHub로 로그인</button>
+        <button id="logoutBtn" style="display: none">로그아웃</button>
+        <p id="userInfo"></p>
+
+        <div id="chatBox" style="display: none">
+          <ul id="chatMessages"></ul>
+          <form id="chatForm">
+            <input id="chatInput" placeholder="메시지를 입력하세요" required />
+            <button type="submit">전송</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="bookList" class="book-list"></section>
+
+      <!-- 댓글 영역 (선택한 책 상세에서 사용) -->
+      <section id="commentSection" class="comment-section">
+        <h2 id="commentBookTitle">댓글</h2>
+        <form id="commentForm">
+          <input
+            type="text"
+            id="commentNickname"
+            placeholder="닉네임"
+            required
+          />
+          <textarea
+            id="commentText"
+            placeholder="댓글을 입력하세요"
+            required
+          ></textarea>
+          <button type="submit">댓글 등록</button>
+        </form>
+        <ul id="commentList"></ul>
+      </section>
+    </main>
+
+    <script type="module" src="script.js"></script>
+  </body>
+</html>
