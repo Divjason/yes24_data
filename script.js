@@ -366,3 +366,105 @@ document
 
 // 초기 로딩
 loadBooks();
+
+// ====== 카메라 열기 / 캡처 / 닫기 로직 추가 ======
+
+const cameraButton = document.getElementById("cameraButton");
+const cameraArea = document.getElementById("cameraArea");
+const cameraPreview = document.getElementById("cameraPreview");
+const captureButton = document.getElementById("captureButton");
+const closeCameraButton = document.getElementById("closeCameraButton");
+
+let cameraStream = null; // 현재 웹캠 스트림 저장
+
+// ====== 카메라 켜기 버튼 ======
+cameraButton.addEventListener("click", async () => {
+  try {
+    // 이미 켜져있으면 영역만 보여주고 끝
+    if (cameraStream) {
+      cameraArea.classList.remove("hidden");
+      return;
+    }
+
+    // 브라우저에서 카메라 권한 요청
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+    cameraPreview.srcObject = cameraStream;
+    cameraArea.classList.remove("hidden");
+  } catch (err) {
+    console.error("카메라 접근 실패:", err);
+    alert("카메라를 사용할 수 없습니다. 브라우저 권한을 확인해주세요.");
+  }
+});
+
+// ====== 카메라 끄기 함수 ======
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach((track) => track.stop());
+    cameraStream = null;
+  }
+  cameraArea.classList.add("hidden");
+}
+
+closeCameraButton.addEventListener("click", stopCamera);
+
+// ====== “촬영” 버튼 → 사진 캡처 + Firebase Storage 업로드 + 채팅 전송 ======
+captureButton.addEventListener("click", () => {
+  if (!cameraStream) return;
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert("먼저 GitHub로 로그인 해주세요.");
+    return;
+  }
+
+  // 비디오 해상도 얻기 (없으면 기본값)
+  const track = cameraStream.getVideoTracks()[0];
+  const settings = track.getSettings();
+  const width = settings.width || 640;
+  const height = settings.height || 480;
+
+  // 캔버스에 현재 프레임 그리기
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(cameraPreview, 0, 0, width, height);
+
+  // 캔버스를 Blob(JPEG 이미지)로 변환
+  canvas.toBlob(
+    async (blob) => {
+      if (!blob) return;
+
+      try {
+        const filePath = `chatImages/${user.uid}/${Date.now()}_camera.jpg`;
+        const storageRef = ref(storage, filePath);
+
+        // 1) Storage에 업로드
+        await uploadBytes(storageRef, blob);
+
+        // 2) 다운로드 URL 가져오기
+        const imageUrl = await getDownloadURL(storageRef);
+
+        // 3) Firestore에 채팅 메시지 추가 (텍스트 + 이미지)
+        const text = chatInput.value; // 선택: 입력창 내용 같이 보낼 수 있음
+
+        await addDoc(messagesRef, {
+          user_id: user.uid,
+          user_name: user.displayName || user.email,
+          text,
+          imageUrl,
+          created_at: serverTimestamp(),
+        });
+
+        chatInput.value = "";
+        stopCamera(); // 촬영 후 카메라 닫기
+      } catch (err) {
+        console.error("촬영 이미지 전송 오류:", err);
+        alert("사진을 전송하는 중 오류가 발생했습니다.");
+      }
+    },
+    "image/jpeg",
+    0.9
+  );
+});

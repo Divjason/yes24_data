@@ -32,8 +32,17 @@
           <form id="chatForm">
             <input id="chatInput" placeholder="메시지를 입력하세요" required />
             <input id="chatImage" type="file" accept="image/*" />
+            <button type="button" id="cameraButton">촬영하기</button>
             <button type="submit">전송</button>
           </form>
+
+          <div id="cameraArea" class="hidden">
+            <video id="cameraPreview" autoplay playsinline></video>
+            <div>
+              <button type="button" id="captureButton">촬영</button>
+              <button type="button" id="closeCameraButton">닫기</button>
+            </div>
+          </div>
         </div>
       </section>
 

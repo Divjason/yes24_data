@@ -96,3 +96,14 @@ header {
   padding: 8px 0;
   border-bottom: 1px solid #eee;
 }
+
+.hidden {
+  display: none;
+}
+#cameraArea {
+  margin-top: 8px;
+}
+#cameraPreview {
+  max-width: 100%;
+  border-radius: 8px;
+}
