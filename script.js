@@ -211,13 +211,30 @@ async function loadComments(book) {
     });
     const rows = await res.json();
     listEl.innerHTML = "";
+
+    const user = auth.currentUser;
+
     if (rows.length === 0) {
       listEl.innerHTML = "<li>첫 번째 댓글을 남겨보세요 😊</li>";
     } else {
       rows.forEach((row) => {
         const li = document.createElement("li");
-        li.textContent = `${row.nickname} : ${row.comment_text}`;
+        let html = `<strong>${row.nickname}</strong> : ${row.comment_text}`;
+        // 로그인 되어 있고, 내 uid와 같으면 삭제 버튼 노출
+        if (user && row.firebase_uid === user.uid) {
+          html += ` <button type="button" class="delete-comment" data-id="${row.id}">삭제</button>`;
+        }
+
+        li.innerHTML = html;
         listEl.appendChild(li);
+      });
+
+      // 삭제 버튼 이벤트 바인딩
+      listEl.querySelectorAll(".delete-comment").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          deleteComment(id);
+        });
       });
     }
   } catch (err) {
@@ -234,6 +251,12 @@ async function submitComment(e) {
     return;
   }
 
+  const user = auth.currentUser; // Firebase 로그인 유저
+  if (!user) {
+    alert("댓글을 남기려면 먼저 GitHub로 로그인 해주세요.");
+    return;
+  }
+
   const nickname = document.getElementById("commentNickname").value;
   const text = document.getElementById("commentText").value;
 
@@ -241,6 +264,7 @@ async function submitComment(e) {
     book_url: selectedBook.detail_url,
     nickname,
     comment_text: text,
+    firebase_uid: user.uid,
   };
 
   try {
