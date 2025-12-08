@@ -7,7 +7,11 @@
   </head>
   <body>
     <header>
-      <h1>YES24 Book Hub (Demo)</h1>
+      <h1>YES24 Book Hub</h1>
+      <!-- ✅ 내 댓글 모아보기 버튼 추가 -->
+      <button id="myCommentsToggle" class="my-comments-btn">
+        내 댓글 모아보기
+      </button>
       <div class="filters">
         <input
           id="searchInput"
@@ -48,6 +52,8 @@
 
       <section id="bookList" class="book-list"></section>
 
+      <section id="relatedGoods"></section>
+
       <!-- 댓글 영역 (선택한 책 상세에서 사용) -->
       <section id="commentSection" class="comment-section">
         <h2 id="commentBookTitle">댓글</h2>
@@ -68,6 +74,29 @@
         <ul id="commentList"></ul>
       </section>
     </main>
+
+    <!-- ✅ 내 댓글 모달 -->
+    <div id="myCommentsModal" class="modal hidden">
+      <div class="modal-content">
+        <button id="myCommentsClose" class="modal-close">&times;</button>
+        <h2>내가 남긴 댓글 요약</h2>
+        <p id="myCommentsSummary" class="modal-summary"></p>
+
+        <div class="modal-body">
+          <div class="modal-col">
+            <h3>내 댓글 목록</h3>
+            <ul id="myCommentsList"></ul>
+          </div>
+          <div class="modal-col">
+            <h3>단어 TOP 10</h3>
+            <ul id="myCommentsWords"></ul>
+
+            <h3 style="margin-top: 16px">감성(긍정 / 부정)</h3>
+            <p id="myCommentsSentiment"></p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="script.js"></script>
   </body>

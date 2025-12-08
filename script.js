@@ -140,8 +140,10 @@ chatForm.addEventListener("submit", async (e) => {
 });
 
 // ====== 0. API & Supabase 설정 ======
-const API_URL =
+const BOOKS_JSON_URL =
   "https://raw.githubusercontent.com/Divjason/yes24_api/refs/heads/main/books_yes24.json";
+const GOODS_JSON_URL =
+  "https://raw.githubusercontent.com/Divjason/yes24_api/refs/heads/main/goods_yes24.json";
 
 // Supabase (4번에서 사용) – 실제 값으로 교체
 const SUPABASE_URL = "https://qzmrjorvtaoxykzkmbmr.supabase.co";
@@ -150,20 +152,41 @@ const SUPABASE_ANON_KEY =
 const SUPABASE_TABLE = "comments";
 
 // ====== 1. 책 데이터 로드 & 렌더링 ======
-let allBooks = [];
+let booksData = [];
+let goodsData = [];
+
+// 책 카테고리 ↔ 굿즈 카테고리 매핑
+const categoryGoodsMap = {
+  국내도서_경제경영: "학습/독서",
+  국내도서_IT: "디지털",
+  국내도서_자기계발: "디자인문구",
+};
+
 let selectedBook = null;
 
-async function loadBooks() {
-  const res = await fetch(API_URL);
-  allBooks = await res.json();
+async function loadAllData() {
+  const [booksRes, goodsRes] = await Promise.all([
+    fetch(BOOKS_JSON_URL),
+    fetch(GOODS_JSON_URL),
+  ]);
+
+  booksData = await booksRes.json();
+  goodsData = await goodsRes.json();
+
+  // 🔥 책 데이터 준비된 시점 → 여기서 카테고리 메뉴 생성
   populateCategoryDropdown();
-  renderBooks(allBooks);
+
+  // 🔥 기본 화면에 책 목록 렌더링
+  renderBooks(booksData);
 }
+
+window.addEventListener("DOMContentLoaded", loadAllData);
 
 function populateCategoryDropdown() {
   const categorySelect = document.getElementById("categorySelect");
+  categorySelect.innerHTML = ""; // 필요하면 기존 옵션 비우기
   const categories = [
-    ...new Set(allBooks.map((b) => b.category).filter(Boolean)),
+    ...new Set(booksData.map((b) => b.category).filter(Boolean)),
   ];
   categories.forEach((cat) => {
     const opt = document.createElement("option");
@@ -195,7 +218,7 @@ function renderBooks(books) {
       <p class="meta">${book.author || "저자 미상"} | ${
       book.publisher || ""
     }</p>
-      <p class="meta">정가: ${book.list_price || "-"} / 판매가: ${
+      <p class="meta">판매가: ${book.list_price || "-"} / 정가: ${
       book.sale_price || "-"
     }</p>
       <p class="meta">카테고리: ${book.category || ""} | 재고: ${
@@ -212,19 +235,96 @@ function renderBooks(books) {
 }
 
 function applyFilters() {
-  const q = document.getElementById("searchInput").value.toLowerCase();
+  const qRaw = document.getElementById("searchInput").value;
+  const q = qRaw.trim().toLowerCase();
   const cat = document.getElementById("categorySelect").value;
 
-  const filtered = allBooks.filter((book) => {
-    const inCategory = cat ? book.category === cat : true;
+  const filtered = booksData.filter((book) => {
+    // 카테고리 필터 (value가 "all"인지 ""인지 너 코드 기준에 맞게 조정)
+    const inCategory = !cat || cat === "all" ? true : book.category === cat;
+    // 검색어: 제목 + 저자 + 출판사 합쳐서 검사
     const text = `${book.title || ""} ${book.author || ""} ${
       book.publisher || ""
     }`.toLowerCase();
-    const inSearch = text.includes(q);
+    const inSearch = q ? text.includes(q) : true;
     return inCategory && inSearch;
   });
 
   renderBooks(filtered);
+  // 🔥 관련 굿즈 렌더링
+  if (q) {
+    renderRelatedGoods(q, filtered);
+  } else {
+    const goodsContainer = document.getElementById("relatedGoods");
+    if (goodsContainer) goodsContainer.innerHTML = "";
+  }
+}
+
+// ====== “검색어 기반 연관 굿즈 10개” 함수 ======
+function renderRelatedGoods(keyword, filteredBooks) {
+  const container = document.getElementById("relatedGoods");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (filteredBooks.length === 0) return;
+
+  const bookCategories = Array.from(
+    new Set(filteredBooks.map((b) => b.category))
+  );
+
+  bookCategories.forEach((bookCat) => {
+    const goodsCat = categoryGoodsMap[bookCat];
+    if (!goodsCat) return;
+
+    // 1차: 키워드 매칭
+    let related = goodsData.filter(
+      (item) =>
+        item.category === goodsCat &&
+        keyword &&
+        item.title &&
+        item.title.toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    // 2차: 키워드 매칭이 하나도 없으면, 카테고리 전체에서 10개
+    if (related.length === 0) {
+      related = goodsData.filter((item) => item.category === goodsCat);
+    }
+
+    related = related.slice(0, 10);
+
+    if (related.length === 0) return;
+
+    const section = document.createElement("section");
+    section.className = "goods-section";
+
+    section.innerHTML = `
+      <h3>${bookCat} 검색("${keyword}") 관련 굿즈 – ${goodsCat} 추천</h3>
+    `;
+
+    const list = document.createElement("div");
+    list.className = "goods-list";
+
+    related.forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "goods-card";
+      card.innerHTML = `
+        <a href="${item.detail_url}" target="_blank" rel="noopener noreferrer">
+          <img src="${item.thumbnail || ""}" alt="${item.title || ""}" />
+          <p class="goods-title">${item.title || ""}</p>
+          ${
+            item.price
+              ? `<p class="goods-price">${item.price.toLocaleString()}원</p>`
+              : ""
+          }
+        </a>
+      `;
+      list.appendChild(card);
+    });
+
+    section.appendChild(list);
+    container.appendChild(section);
+  });
 }
 
 // ====== 2. 댓글 영역 (Supabase 사용) ======
@@ -355,6 +455,158 @@ async function submitComment(e) {
   }
 }
 
+// ====== 내 댓글 단어/감성 분석 유틸 ======
+function analyzeComments(text) {
+  // 간단 스톱워드 (자유롭게 보완 가능)
+  const stopWords = [
+    "은",
+    "는",
+    "이",
+    "가",
+    "을",
+    "를",
+    "에",
+    "의",
+    "와",
+    "과",
+    "도",
+    "으로",
+    "에서",
+    "입니다",
+    "정말",
+    "근데",
+    "하고",
+    "인데",
+  ];
+
+  // 아주 가벼운 긍/부정 키워드 (교육용 데모)
+  const posWords = [
+    "좋",
+    "재미있",
+    "유익",
+    "감동",
+    "추천",
+    "최고",
+    "만족",
+    "훌륭",
+  ];
+  const negWords = [
+    "별로",
+    "지루",
+    "최악",
+    "실망",
+    "아쉽",
+    "불편",
+    "복잡",
+    "싫",
+  ];
+
+  // 특수문자 제거 후 공백 기준 토큰화
+  const cleaned = text.replace(/[^\p{L}0-9\s]/gu, " ");
+  const tokens = cleaned
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w && !stopWords.includes(w));
+
+  const freq = new Map();
+  for (const t of tokens) {
+    freq.set(t, (freq.get(t) || 0) + 1);
+  }
+
+  const topWords = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  let posCount = 0;
+  let negCount = 0;
+  for (const token of tokens) {
+    if (posWords.some((p) => token.includes(p))) posCount++;
+    if (negWords.some((n) => token.includes(n))) negCount++;
+  }
+
+  return {
+    topWords,
+    posCount,
+    negCount,
+    totalWords: tokens.length,
+  };
+}
+
+// ====== 내 댓글 모달 열기 ======
+async function openMyCommentsModal() {
+  const user = auth.currentUser;
+  if (!user) {
+    alert("먼저 GitHub로 로그인 해주세요.");
+    return;
+  }
+
+  const modal = document.getElementById("myCommentsModal");
+  const listEl = document.getElementById("myCommentsList");
+  const wordsEl = document.getElementById("myCommentsWords");
+  const sentiEl = document.getElementById("myCommentsSentiment");
+  const summaryEl = document.getElementById("myCommentsSummary");
+
+  modal.classList.remove("hidden");
+  listEl.innerHTML = "<li>내 댓글을 불러오는 중...</li>";
+  wordsEl.innerHTML = "";
+  sentiEl.textContent = "";
+  summaryEl.textContent = "";
+
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?firebase_uid=eq.${encodeURIComponent(
+      user.uid
+    )}&order=created_at.desc`;
+
+    const res = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+    const rows = await res.json();
+
+    if (rows.length === 0) {
+      listEl.innerHTML = "<li>아직 작성한 댓글이 없습니다.</li>";
+      summaryEl.textContent = "작성한 댓글이 없어서 통계를 계산할 수 없습니다.";
+      return;
+    }
+
+    listEl.innerHTML = "";
+    const allText = [];
+
+    rows.forEach((row) => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <strong>${row.nickname}</strong>
+        <small>${row.book_url || ""}</small>
+        <span>${row.comment_text}</span>
+      `;
+      listEl.appendChild(li);
+
+      if (row.comment_text) allText.push(row.comment_text);
+    });
+
+    const joined = allText.join(" ");
+    const { topWords, posCount, negCount, totalWords } =
+      analyzeComments(joined);
+
+    // 단어 TOP10 렌더링
+    wordsEl.innerHTML = "";
+    topWords.forEach(([word, count]) => {
+      const li = document.createElement("li");
+      li.textContent = `${word} (${count})`;
+      wordsEl.appendChild(li);
+    });
+
+    // 감성 요약
+    sentiEl.textContent = `긍정 단어: ${posCount}개, 부정 단어: ${negCount}개`;
+    summaryEl.textContent = `총 댓글 ${rows.length}개, 분석된 단어 수: ${totalWords}개`;
+  } catch (err) {
+    console.error("내 댓글 로드 오류:", err);
+    listEl.innerHTML = "<li>댓글을 불러오는 중 오류가 발생했습니다.</li>";
+  }
+}
+
 // ====== 3. 이벤트 바인딩 ======
 document.getElementById("searchInput").addEventListener("input", applyFilters);
 document
@@ -364,8 +616,21 @@ document
   .getElementById("commentForm")
   .addEventListener("submit", submitComment);
 
-// 초기 로딩
-loadBooks();
+// ✅ 내 댓글 모달 토글
+const myCommentsToggle = document.getElementById("myCommentsToggle");
+const myCommentsModal = document.getElementById("myCommentsModal");
+const myCommentsClose = document.getElementById("myCommentsClose");
+
+myCommentsToggle.addEventListener("click", openMyCommentsModal);
+myCommentsClose.addEventListener("click", () => {
+  myCommentsModal.classList.add("hidden");
+});
+// 모달 배경 클릭해도 닫히게
+myCommentsModal.addEventListener("click", (e) => {
+  if (e.target === myCommentsModal) {
+    myCommentsModal.classList.add("hidden");
+  }
+});
 
 // ====== 카메라 열기 / 캡처 / 닫기 로직 추가 ======
 

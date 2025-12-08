@@ -107,3 +107,128 @@ header {
   max-width: 100%;
   border-radius: 8px;
 }
+
+.goods-section {
+  margin-top: 24px;
+}
+.goods-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.goods-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+}
+.goods-card img {
+  width: 100%;
+  border-radius: 6px;
+}
+.goods-title {
+  margin-top: 4px;
+}
+.goods-price {
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* === 헤더 상단 정렬 === */
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.my-comments-btn {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  background: #444;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+.my-comments-btn:hover {
+  background: #666;
+}
+
+/* === 모달 === */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 60px;
+  z-index: 1000;
+}
+
+/* 모달에 hidden 클래스가 붙어 있을 때는 무조건 안 보이게 */
+.modal.hidden {
+  display: none !important;
+}
+
+/* 이미 .hidden { display:none; }가 있으므로 그대로 사용 */
+.modal-content {
+  background: #fff;
+  border-radius: 8px;
+  max-width: 900px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: auto;
+  padding: 16px 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.modal-close {
+  border: none;
+  background: none;
+  font-size: 20px;
+  float: right;
+  cursor: pointer;
+}
+
+.modal-summary {
+  margin: 8px 0 12px;
+  font-size: 14px;
+  color: #555;
+}
+
+.modal-body {
+  display: flex;
+  gap: 16px;
+}
+
+.modal-col {
+  flex: 1;
+  font-size: 14px;
+}
+
+/* 내 댓글 목록 */
+#myCommentsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+#myCommentsList li {
+  border-bottom: 1px solid #eee;
+  padding: 6px 0;
+}
+#myCommentsList li small {
+  display: block;
+  color: #888;
+  font-size: 12px;
+}
+
+/* 단어 Top10 */
+#myCommentsWords {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+#myCommentsWords li {
+  padding: 2px 0;
+}
