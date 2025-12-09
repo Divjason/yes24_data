@@ -232,3 +232,24 @@ header {
 #myCommentsWords li {
   padding: 2px 0;
 }
+
+/* 핀 버튼 스타일 */
+.book-thumb-wrap {
+  position: relative;
+}
+
+.pin-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pin-btn.pinned {
+  background: #ffcc00;
+}

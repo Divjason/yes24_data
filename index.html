@@ -8,6 +8,8 @@
   <body>
     <header>
       <h1>YES24 Book Hub</h1>
+      <!-- ✅ 스크랩 페이지 이동 버튼 추가 -->
+      <button id="openMyPinsModal" class="top-right-btn">내 스크랩</button>
       <!-- ✅ 내 댓글 모아보기 버튼 추가 -->
       <button id="myCommentsToggle" class="my-comments-btn">
         내 댓글 모아보기
@@ -23,7 +25,6 @@
         </select>
       </div>
     </header>
-
     <main>
       <section id="authSection" class="comment-section">
         <h2>GitHub 로그인 & 채팅 데모</h2>
@@ -74,7 +75,6 @@
         <ul id="commentList"></ul>
       </section>
     </main>
-
     <!-- ✅ 내 댓글 모달 -->
     <div id="myCommentsModal" class="modal hidden">
       <div class="modal-content">
@@ -97,7 +97,14 @@
         </div>
       </div>
     </div>
-
+    <!-- ✅ 내 스크랩 모달 -->
+    <div id="myPinsModal" class="modal hidden">
+      <div class="modal-content">
+        <button id="closeMyPinsModal" class="modal-close">×</button>
+        <h2>내가 스크랩한 책</h2>
+        <ul id="myPinsList"></ul>
+      </div>
+    </div>
     <script type="module" src="script.js"></script>
   </body>
 </html>

@@ -66,7 +66,38 @@ onAuthStateChanged(auth, (user) => {
     logoutBtn.style.display = "none";
     chatBox.style.display = "none";
   }
+
+  // 로그인 후 스크랩 관련 코드
+  const statusEl = document.getElementById("loginStatus");
+
+  if (user) {
+    statusEl.textContent = `로그인 사용자: ${user.displayName || user.email}`;
+    loadMyPins(user.uid);
+  } else {
+    statusEl.textContent = "로그인하지 않았습니다.";
+    pinnedSet = new Set();
+    renderBooks(booksData); // 핀 버튼 상태 초기화
+  }
 });
+
+// ====== 로그인 후 내 스크랩 불러오기 ======
+
+async function loadMyPins(firebaseUid) {
+  const url = `${SUPABASE_URL}/rest/v1/favorites?firebase_uid=eq.${firebaseUid}`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+  const rows = await res.json();
+  pinnedSet = new Set(rows.map((r) => r.book_url));
+
+  // 이미 화면에 책이 렌더링 되어 있다면, 핀 상태 업데이트를 위해 다시 렌더
+  if (booksData.length > 0) {
+    renderBooks(booksData); // 혹은 현재 필터링된 배열
+  }
+}
 
 // ====== 채팅 기능 ======
 const chatMessages = document.getElementById("chatMessages");
@@ -164,6 +195,9 @@ const categoryGoodsMap = {
 
 let selectedBook = null;
 
+// 📌 사용자가 스크랩한 책 URL 목록 (빠른 체크용)
+let pinnedSet = new Set();
+
 async function loadAllData() {
   const [booksRes, goodsRes] = await Promise.all([
     fetch(BOOKS_JSON_URL),
@@ -204,33 +238,42 @@ function renderBooks(books) {
     const card = document.createElement("article");
     card.className = "book-card";
 
-    const url = book.detail_url || "#";
+    const isPinned = pinnedSet.has(book.detail_url); // 아래에서 설명
 
     card.innerHTML = `
-      <a href="${url}" target="_blank" rel="noopener noreferrer">
-        <img src="${book.thumbnail || ""}" alt="${book.title || ""}" />
-      </a>
-      <h3>
-        <a href="${url}" target="_blank" rel="noopener noreferrer">
-          ${book.title || "제목 없음"}
-        </a>
-      </h3>
-      <p class="meta">${book.author || "저자 미상"} | ${
-      book.publisher || ""
-    }</p>
-      <p class="meta">판매가: ${book.list_price || "-"} / 정가: ${
-      book.sale_price || "-"
-    }</p>
-      <p class="meta">카테고리: ${book.category || ""} | 재고: ${
-      book.stock || ""
-    }</p>
-      <button type="button">댓글 보기</button>
+      <div class="book-thumb-wrap">
+        <img src="${book.thumbnail}" alt="${book.title}">
+        <button 
+          class="pin-btn ${isPinned ? "pinned" : ""}" 
+          data-detail-url="${book.detail_url}"
+          data-title="${book.title}"
+          data-thumbnail="${book.thumbnail || ""}"
+        >
+          📌
+        </button>
+      </div>
+      <h3 class="book-title">${book.title}</h3>
+      <p class="book-author">${book.author || ""}</p>
+      <p class="book-price">${book.sale_price?.toLocaleString() || ""}원</p>
+      <button class="comment-open-btn">댓글 보기</button>
     `;
 
     const btn = card.querySelector("button");
     btn.addEventListener("click", () => openCommentSection(book));
 
     listEl.appendChild(card);
+  });
+
+  // 📌 버튼 클릭 이벤트 연결
+  document.querySelectorAll(".pin-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const book = {
+        detail_url: btn.dataset.detailUrl,
+        title: btn.dataset.title,
+        thumbnail: btn.dataset.thumbnail,
+      };
+      togglePin(book, btn);
+    });
   });
 }
 
@@ -771,3 +814,119 @@ captureButton.addEventListener("click", () => {
     0.9
   );
 });
+
+// 핀/언핀 토글 함수 만들기
+async function togglePin(book, buttonEl) {
+  const user = auth.currentUser;
+  if (!user) {
+    alert("로그인 후 스크랩 기능을 사용할 수 있습니다.");
+    return;
+  }
+
+  const bookUrl = book.detail_url;
+  const isPinned = pinnedSet.has(bookUrl);
+
+  if (!isPinned) {
+    // ✅ 스크랩 추가 (INSERT)
+    const payload = {
+      firebase_uid: user.uid,
+      book_url: bookUrl,
+      title: book.title,
+      thumbnail: book.thumbnail,
+    };
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/favorites`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      console.error("스크랩 저장 실패", await res.text());
+      alert("스크랩 저장 중 오류가 발생했습니다.");
+      return;
+    }
+
+    pinnedSet.add(bookUrl);
+    buttonEl.classList.add("pinned");
+  } else {
+    // ❌ 스크랩 해제 (DELETE)
+    const deleteUrl =
+      `${SUPABASE_URL}/rest/v1/favorites` +
+      `?firebase_uid=eq.${user.uid}` +
+      `&book_url=eq.${encodeURIComponent(bookUrl)}`;
+
+    const res = await fetch(deleteUrl, {
+      method: "DELETE",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Prefer: "return=minimal",
+      },
+    });
+
+    if (!res.ok) {
+      console.error("스크랩 삭제 실패", await res.text());
+      alert("스크랩 삭제 중 오류가 발생했습니다.");
+      return;
+    }
+
+    pinnedSet.delete(bookUrl);
+    buttonEl.classList.remove("pinned");
+  }
+}
+
+// JS에서 스크랩 모달 열기 + 데이터 렌더링
+document
+  .getElementById("openMyPinsModal")
+  .addEventListener("click", openMyPinsModal);
+
+document.getElementById("closeMyPinsModal").addEventListener("click", () => {
+  document.getElementById("myPinsModal").classList.add("hidden");
+});
+
+async function openMyPinsModal() {
+  const user = auth.currentUser;
+  if (!user) {
+    alert("로그인 후 내 스크랩을 볼 수 있습니다.");
+    return;
+  }
+
+  const url = `${SUPABASE_URL}/rest/v1/favorites?firebase_uid=eq.${user.uid}&order=created_at.desc`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+  const rows = await res.json();
+
+  const listEl = document.getElementById("myPinsList");
+  listEl.innerHTML = "";
+
+  if (rows.length === 0) {
+    listEl.innerHTML = "<li>아직 스크랩한 책이 없습니다 🙂</li>";
+  } else {
+    rows.forEach((row) => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <a href="${row.book_url}" target="_blank" class="my-pin-item">
+          ${
+            row.thumbnail
+              ? `<img src="${row.thumbnail}" alt="${row.title}">`
+              : ""
+          }
+          <span>${row.title}</span>
+        </a>
+      `;
+      listEl.appendChild(li);
+    });
+  }
+
+  document.getElementById("myPinsModal").classList.remove("hidden");
+}
