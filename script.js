@@ -520,16 +520,31 @@ function analyzeComments(text) {
 
   let posCount = 0;
   let negCount = 0;
+
+  const posHit = new Map(); // 긍정으로 잡힌 실제 단어들
+  const negHit = new Map(); // 부정으로 잡힌 실제 단어들
+
   for (const token of tokens) {
-    if (posWords.some((p) => token.includes(p))) posCount++;
-    if (negWords.some((n) => token.includes(n))) negCount++;
+    if (posWords.some((p) => token.includes(p))) {
+      posCount++;
+      posHit.set(token, (posHit.get(token) || 0) + 1);
+    }
+    if (negWords.some((n) => token.includes(n))) {
+      negCount++;
+      negHit.set(token, (negHit.get(token) || 0) + 1);
+    }
   }
+
+  const posTop = [...posHit.entries()].sort((a, b) => b[1] - a[1]);
+  const negTop = [...negHit.entries()].sort((a, b) => b[1] - a[1]);
 
   return {
     topWords,
     posCount,
     negCount,
     totalWords: tokens.length,
+    posTop,
+    negTop,
   };
 }
 
@@ -590,7 +605,7 @@ async function openMyCommentsModal() {
     });
 
     const joined = allText.join(" ");
-    const { topWords, posCount, negCount, totalWords } =
+    const { topWords, posCount, negCount, totalWords, posTop, negTop } =
       analyzeComments(joined);
 
     // 단어 TOP10 렌더링
@@ -601,8 +616,28 @@ async function openMyCommentsModal() {
       wordsEl.appendChild(li);
     });
 
-    // 감성 요약
-    sentiEl.textContent = `긍정 단어: ${posCount}개, 부정 단어: ${negCount}개`;
+    // ★ 긍정/부정 단어 리스트 만들기 (상위 5개만 예쁘게)
+    const posLabel = posTop.length
+      ? posTop
+          .slice(0, 5)
+          .map(([w, c]) => `${w}(${c})`)
+          .join(", ")
+      : "없음";
+
+    const negLabel = negTop.length
+      ? negTop
+          .slice(0, 5)
+          .map(([w, c]) => `${w}(${c})`)
+          .join(", ")
+      : "없음";
+
+    // 감성 요약 출력 (줄바꿈을 쓰고 싶으니 innerHTML 사용)
+    sentiEl.innerHTML = `
+    긍정 단어: ${posCount}개<br>
+    <small>${posLabel}</small><br><br>
+    부정 단어: ${negCount}개<br>
+    <small>${negLabel}</small>
+    `;
     summaryEl.textContent = `총 댓글 ${rows.length}개, 분석된 단어 수: ${totalWords}개`;
   } catch (err) {
     console.error("내 댓글 로드 오류:", err);
