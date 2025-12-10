@@ -255,7 +255,7 @@ function renderBooks(books) {
       <h3 class="book-title">${book.title}</h3>
       <p class="book-author">${book.author || ""}</p>
       <p class="book-price">${book.sale_price?.toLocaleString() || ""}원</p>
-      <button class="comment-open-btn">댓글 보기</button>
+      <button class="comment-open-btn detail-btn">댓글 보기</button>
     `;
 
     const btn = card.querySelector("button");
