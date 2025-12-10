@@ -67,16 +67,21 @@ onAuthStateChanged(auth, (user) => {
     chatBox.style.display = "none";
   }
 
-  // 로그인 후 스크랩 관련 코드
   const statusEl = document.getElementById("loginStatus");
 
   if (user) {
-    statusEl.textContent = `로그인 사용자: ${user.displayName || user.email}`;
+    if (statusEl) {
+      statusEl.textContent = `로그인 사용자: ${user.displayName || user.email}`;
+    }
     loadMyPins(user.uid);
   } else {
-    statusEl.textContent = "로그인하지 않았습니다.";
+    if (statusEl) {
+      statusEl.textContent = "로그인하지 않았습니다.";
+    }
     pinnedSet = new Set();
-    renderBooks(booksData); // 핀 버튼 상태 초기화
+    if (booksData.length > 0) {
+      renderBooks(booksData); // 핀 상태 초기화
+    }
   }
 });
 
@@ -258,15 +263,18 @@ function renderBooks(books) {
       <button class="comment-open-btn detail-btn">댓글 보기</button>
     `;
 
-    const btn = card.querySelector("button");
-    btn.addEventListener("click", () => openCommentSection(book));
+    // ✅ 댓글 버튼에만 댓글 열기 연결
+    const commentBtn = card.querySelector(".comment-open-btn");
+    commentBtn.addEventListener("click", () => openCommentSection(book));
 
     listEl.appendChild(card);
   });
 
-  // 📌 버튼 클릭 이벤트 연결
-  document.querySelectorAll(".pin-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+  // ✅ 핀 버튼에만 스크랩 토글 연결 (+ 클릭 버블링 방지)
+  const pinButtons = listEl.querySelectorAll(".pin-btn");
+  pinButtons.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation(); // 혹시 모를 버블링 방지
       const book = {
         detail_url: btn.dataset.detailUrl,
         title: btn.dataset.title,
