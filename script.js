@@ -254,7 +254,7 @@ function renderBooks(books) {
       </div>
       <h3 class="book-title">${book.title}</h3>
       <p class="book-author">${book.author || ""}</p>
-      <p class="book-price">${book.sale_price?.toLocaleString() || ""}원</p>
+      <p class="book-price">${book.sale_price?.toLocaleString() || ""}</p>
       <button class="comment-open-btn detail-btn">댓글 보기</button>
     `;
 

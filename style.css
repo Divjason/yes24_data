@@ -1,3 +1,8 @@
+a {
+  text-decoration: none;
+  color: #222;
+}
+
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   margin: 0;
@@ -245,6 +250,21 @@ header {
 }
 #myCommentsWords li {
   padding: 2px 0;
+}
+
+/* 스크랩 버튼 */
+#openMyPinsModal {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  background: #444;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#openMyPinsModal:hover {
+  background: #666;
 }
 
 /* 핀 버튼 스타일 */
